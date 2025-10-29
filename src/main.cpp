@@ -8,16 +8,15 @@
 #include "homeassistant.h"
 
 OWMOneCall weather;
-OWMUnits units = MY_UNITS;
 
 RTC_DATA_ATTR time_t lastBootTime = 0;
-RTC_DATA_ATTR bool warm_boot = true;
-RTC_DATA_ATTR bool updateCurrentConditions = false;
-RTC_DATA_ATTR bool updateForecast = false;
+bool updateCurrentConditions = false;
+bool updateForecast = false;
 
 const char *TIMEZONE = MY_TIMEZONE;
 time_t thisBootTime = 0;
 bool d9_low_at_boot = false;
+bool need_time_init = false;
 esp_reset_reason_t reset_reason;
 
 #ifdef APPDEBUG
@@ -68,14 +67,23 @@ void verbose_print_reset_reason(esp_reset_reason_t reason)
 
 void setup()
 {
+    struct tm current_time_tm;
     pinMode(D9, INPUT);
 
-#ifdef APPDEBUG
-    delay(5000);
-#endif
+    #if APPDEBUG
+    Serial.begin(115200);
+    #endif
 
     reset_reason = esp_reset_reason();
     d9_low_at_boot = (digitalRead(D9) == LOW);
+
+    APPDEBUG_PRINTLN("Initializing time.");
+    initTime(TIMEZONE);
+
+    // track the time the system booted
+    time(&thisBootTime);
+
+    // now fogire out if we need a full update and/or current conditions update
 
     if (reset_reason != ESP_RST_DEEPSLEEP || d9_low_at_boot == true)
     {
@@ -83,13 +91,36 @@ void setup()
         updateForecast = true;
     }
 
+    if (getLocalTime(&current_time_tm))
+    {
+        if (current_time_tm.tm_min % TEMPERATURE_INTERVAL_MINUTES == 0)
+        {
+            updateCurrentConditions |= true;
+        }
+
+        // always do a 12-hour forecast update at the top of the hour
+        if (current_time_tm.tm_min == 59)
+        {
+            updateForecast|= true;
+        }
+    }
+    else 
+    {
+        need_time_init = true;
+    }
+
     // set this variable to facilitate interleaving the display init
     // with the WiFi connection bringup and also initialize in the
     // correct manner if this is a warm boot or not.
     bool partialDisplayInit = (reset_reason == ESP_RST_DEEPSLEEP);
 
-    // if updating the forecast or conditions, WiFi is required...
-    if (updateCurrentConditions || updateForecast)
+#ifdef APPDEBUG
+    Serial.println("Delaying 5 seconds.");
+    delay(5000);
+#endif
+
+// if updating the forecast or conditions, WiFi is required...
+    if (updateCurrentConditions || updateForecast || need_time_init)
     {
         WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
@@ -111,24 +142,34 @@ void setup()
 #ifdef APPDEBUG
         Serial.printf("WiFi connected to: %s\n", WIFI_SSID);
 #endif
+
+        if (need_time_init)
+        {
+            APPDEBUG_PRINTLN("Initializing time (again).");
+            initTime(TIMEZONE);
+        }
     }
     else
     {
         InitDisplay(partialDisplayInit);
     }
 
-    APPDEBUG_PRINTLN("Initializing time.");
-    initTime(TIMEZONE);
+#ifdef APPDEBUG
+    verbose_print_reset_reason(reset_reason);
+    Serial.printf("Wake/boot status:\n     rtc time = %i:%02i:%02i\n     lastBootTime = %u\n     updateCurrentConditions = %s\n     updateforecast = %s\n",
+                  current_time_tm.tm_hour, current_time_tm.tm_min, current_time_tm.tm_sec,
+                  lastBootTime,
+                  updateCurrentConditions ? "TRUE" : "FALSE",
+                  updateForecast ? "TRUE" : "FALSE");
+#endif
 
-    // track the time the system booted
-    time(&thisBootTime);
 }
 
 void loop()
 {
-    if (reset_reason != ESP_RST_DEEPSLEEP || warm_boot == false || updateForecast)
+    if (updateForecast)
     {
-        weather.begin(OPEN_WEATHER_MAP_APP_ID, 0, 0, 12, 0, IMPERIAL);
+        weather.begin(OPEN_WEATHER_MAP_APP_ID, 0, 0, 12, 0, MY_UNITS);
         weather.setLocation(MY_LATITUDE, MY_LONGITUDE);
         weather.getWeather();
 
@@ -140,11 +181,8 @@ void loop()
         current_weather.description = lu.substring(11,19);
 
         UpdateEntireDisplay(&current_weather, weather.hrWx);
-
-        updateForecast = false;
-        updateCurrentConditions = false;
     }
-    else if (warm_boot)
+    else
     {
         currentWeather current_weather;
         struct tm current_time;
@@ -170,44 +208,19 @@ void loop()
     struct tm timeinfo;
     int sleep_seconds = 60;
 
-    if (!getLocalTime(&timeinfo))
-    {
-        // if the time couldnt be retrieved, then try again next boot.
-        warm_boot = false;
-    }
-    else
+    if (getLocalTime(&timeinfo))
     {
         // wake up 5 seconds after the next minute.ime) / 1000)
         sleep_seconds = 5 + max(10, (int)(60 - timeinfo.tm_sec));
     }
 
-    // update current conditions every 5 minutes
-    if (timeinfo.tm_min % TEMPERATURE_INTERVAL_MINUTES == 0)
-    {
-        updateCurrentConditions = true;
-    }
-
     // update the hourly forecast at the top of each hour but wait an additional 15 seconds for
     // OpenWeathermap to update their API backend.
 
-    // TODO: use FORECAST_INTERVAL_MINUTES instead of just 59 - probably the same as current conditions
-    // (e..g tm_hour mod interval)
-    if (timeinfo.tm_min == 59)
+    if (updateForecast)
     {
-        updateForecast = true;
         sleep_seconds += 15;
     }
-
-#ifdef APPDEBUG
-    verbose_print_reset_reason(reset_reason);
-    Serial.printf("Pre-sleep status:\n     warm_boot = %s\n     rtc time = %i:%02i:%02i\n     sleep_seconds = %i\n     lastBootTime = %u\n     updateCurrentConditions = %s\n     updateforecast = %s\n",
-                  warm_boot ? "TRUE" : "FALSE",
-                  timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,
-                  sleep_seconds,
-                  lastBootTime,
-                  updateCurrentConditions ? "TRUE" : "FALSE",
-                  updateForecast ? "TRUE" : "FALSE");
-#endif
 
     lastBootTime = thisBootTime;
 
