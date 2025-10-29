@@ -3,6 +3,8 @@
 // Created by Hardy Maxa
 // Complete project details at: https://RandomNerdTutorials.com/esp32-ntp-timezones-daylight-saving/
 
+#include "config.h"
+
 #include <Arduino.h>
 #include <time.h>
 #include <Timezone.h>

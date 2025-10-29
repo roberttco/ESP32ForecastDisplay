@@ -1,89 +1,70 @@
-/*
-   Open Weather One Call Library
-   v4.0.0
-   Copyright 2020=2024 - Jessica Hershey
-   www.github.com/JHershey69
-
-   One Call API key at www.openweathermap.org
-   Google Developer Key no longer required.
-
-   Simple_Latitude_Longitude_Weather_Example.ino
-
-   Returns ALL information and uses Latitude/Longitude, CITY ID, or IP Address
-   If using a hotspot to connect your ESP32 to the WWW your results for IP
-   search maybe be radically out of range. Please consult the documentation
-   for use and variables available in the returned weather message
-
-*/
-
-// ===== Required libraries (Other required libraries are installed in header file)
 #include <WiFi.h>
 #include <OWMOneCall.h>
 
-#include "app.h"
+#include "config.h"
 #include "display.h"
 #include "timeutils.h"
 #include "secret.h"
 #include "homeassistant.h"
 
-// ======= END REQUIRED LIBRARIES =======================================
-
 OWMOneCall weather;
-OWMUnits units = IMPERIAL;
+OWMUnits units = MY_UNITS;
 
 RTC_DATA_ATTR time_t lastBootTime = 0;
 RTC_DATA_ATTR bool warm_boot = true;
 RTC_DATA_ATTR bool updateCurrentConditions = false;
 RTC_DATA_ATTR bool updateForecast = false;
 
-const char *TIMEZONE = "America/Denver";
+const char *TIMEZONE = MY_TIMEZONE;
 time_t thisBootTime = 0;
 bool d9_low_at_boot = false;
 esp_reset_reason_t reset_reason;
 
+#ifdef APPDEBUG
 void verbose_print_reset_reason(esp_reset_reason_t reason)
 {
     switch (reason)
     {
     case ESP_RST_UNKNOWN:
-        APPDEBUG_PRINTLN("Reset reason can not be determined");
+        Serial.println("Reset reason can not be determined");
         break;
     case ESP_RST_POWERON:
-        APPDEBUG_PRINTLN("Reset due to power-on event");
+        Serial.println("Reset due to power-on event");
         break;
     case ESP_RST_EXT:
-        APPDEBUG_PRINTLN("Reset by external pin (not applicable for ESP32)");
+        Serial.println("Reset by external pin (not applicable for ESP32)");
         break;
     case ESP_RST_SW:
-        APPDEBUG_PRINTLN("Software reset via esp_restart");
+        Serial.println("Software reset via esp_restart");
         break;
     case ESP_RST_PANIC:
-        APPDEBUG_PRINTLN("Software reset due to exception/panic");
+        Serial.println("Software reset due to exception/panic");
         break;
     case ESP_RST_INT_WDT:
-        APPDEBUG_PRINTLN("Reset (software or hardware) due to interrupt watchdog");
+        Serial.println("Reset (software or hardware) due to interrupt watchdog");
         break;
     case ESP_RST_TASK_WDT:
-        APPDEBUG_PRINTLN("Reset due to task watchdog");
+        Serial.println("Reset due to task watchdog");
         break;
     case ESP_RST_WDT:
-        APPDEBUG_PRINTLN("Reset due to other watchdogs");
+        Serial.println("Reset due to other watchdogs");
         break;
     case ESP_RST_DEEPSLEEP:
-        APPDEBUG_PRINTLN("Reset after exiting deep sleep mode");
+        Serial.println("Reset after exiting deep sleep mode");
         break;
     case ESP_RST_BROWNOUT:
-        APPDEBUG_PRINTLN("Brownout reset (software or hardware)");
+        Serial.println("Brownout reset (software or hardware)");
         break;
     case ESP_RST_SDIO:
-        APPDEBUG_PRINTLN("Reset over SDIO");
+        Serial.println("Reset over SDIO");
         break;
     default:
-        APPDEBUG_PRINT("Reset reason not enumerated: ");
-        APPDEBUG_PRINTLN(reason);
+        Serial.print("Reset reason not enumerated: ");
+        Serial.println(reason);
         break;
     }
 }
+#endif
 
 void setup()
 {
@@ -148,7 +129,7 @@ void loop()
     if (reset_reason != ESP_RST_DEEPSLEEP || warm_boot == false || updateForecast)
     {
         weather.begin(OPEN_WEATHER_MAP_APP_ID, 0, 0, 12, 0, IMPERIAL);
-        weather.setLocation(OPEN_WEATHER_MAP_LOCATTION_LAT, OPEN_WEATHER_MAP_LOCATTION_LON);
+        weather.setLocation(MY_LATITUDE, MY_LONGITUDE);
         weather.getWeather();
 
         currentWeather current_weather;
@@ -201,22 +182,24 @@ void loop()
     }
 
     // update current conditions every 5 minutes
-    if (timeinfo.tm_min % HA_UPDATE_INTERVAL_MINUTES == 0)
+    if (timeinfo.tm_min % TEMPERATURE_INTERVAL_MINUTES == 0)
     {
         updateCurrentConditions = true;
     }
 
     // update the hourly forecast at the top of each hour but wait an additional 15 seconds for
     // OpenWeathermap to update their API backend.
+
+    // TODO: use FORECAST_INTERVAL_MINUTES instead of just 59 - probably the same as current conditions
+    // (e..g tm_hour mod interval)
     if (timeinfo.tm_min == 59)
     {
         updateForecast = true;
         sleep_seconds += 15;
     }
 
-    verbose_print_reset_reason(reset_reason);
-
 #ifdef APPDEBUG
+    verbose_print_reset_reason(reset_reason);
     Serial.printf("Pre-sleep status:\n     warm_boot = %s\n     rtc time = %i:%02i:%02i\n     sleep_seconds = %i\n     lastBootTime = %u\n     updateCurrentConditions = %s\n     updateforecast = %s\n",
                   warm_boot ? "TRUE" : "FALSE",
                   timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,
