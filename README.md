@@ -16,9 +16,10 @@ The code utilizes the following libraries (see also platformio.ini):
 
 * [XIAO 7.5" ePaper Panel product](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html)
 * [XIAO 7.5" ePaper Panel Wiki](https://wiki.seeedstudio.com/xiao_075inch_epaper_panel/)
+* [XIAO 7.5" ePaper Panel Schematic](https://files.seeedstudio.com/wiki/xiao_075inch_epaper_panel/ePaper_Driver_Board.pdf)
 * [XIAO ESP32-C3](https://wiki.seeedstudio.com/XIAO_ESP32C3_Getting_Started/)
 * [XIAO ESP32-C3 Schematic](https://files.seeedstudio.com/wiki/XIAO_WiFi/Resources/Seeeduino-XIAO-ESP32C3-SCH.pdf)
-* [XIAO 7.5" ePaper Panel Schematic](https://files.seeedstudio.com/wiki/xiao_075inch_epaper_panel/ePaper_Driver_Board.pdf)
+
 
 ## Configuration
 The include/config.h file defines a few configuration values.
