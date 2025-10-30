@@ -1,6 +1,6 @@
 #pragma once
 
-//#define APPDEBUG
+#define APPDEBUG
 //#define DEBUG_HTTPCLIENT
 
 // #########################

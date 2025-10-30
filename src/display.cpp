@@ -5,12 +5,14 @@
 #include <time.h>
 #include <GxEPD2_BW.h>
 
-#include "fonts/RadioCanada_Medium18pt7b.h"
-const GFXfont *currentDateFont = &RadioCanada_Medium18pt7b;
-const GFXfont *forecastTimeFont = &RadioCanada_Medium18pt7b;
+//#include "fonts/RadioCanada_Medium18pt7b.h"
+#include "fonts/NotoSansLinearB_Regular18pt7b.h"
+const GFXfont *currentDateFont = &NotoSansLinearB_Regular18pt7b;
+const GFXfont *forecastTimeFont = &NotoSansLinearB_Regular18pt7b;
 
-#include "fonts/RadioCanada_Medium32pt7b-numbersonly.h"
-const GFXfont *forecastTempFont = &RadioCanada_Medium32pt7b;
+//#include "fonts/RadioCanada_Medium32pt7b-numbersonly.h"
+#include "fonts/NotoSansLinearB_Regular32pt7b.h"
+const GFXfont *forecastTempFont = &NotoSansLinearB_Regular32pt7b;
 
 //#include "fonts/RadioCanada_Regular40pt7b.h"
 

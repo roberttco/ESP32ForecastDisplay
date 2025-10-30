@@ -99,7 +99,7 @@ void setup()
         }
 
         // always do a 12-hour forecast update at the top of the hour
-        if (current_time_tm.tm_min == 59)
+        if (current_time_tm.tm_min == 0)
         {
             updateForecast|= true;
         }
