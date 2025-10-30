@@ -70,9 +70,9 @@ void setup()
     struct tm current_time_tm;
     pinMode(D9, INPUT);
 
-    #if APPDEBUG
+#ifdef APPDEBUG
     Serial.begin(115200);
-    #endif
+#endif
 
     reset_reason = esp_reset_reason();
     d9_low_at_boot = (digitalRead(D9) == LOW);
