@@ -83,11 +83,12 @@ String GetHaState(String entity_id, String *lastChanged)
     return rval;
 }
 
-float GetTemperature(String * lastChanged)
+float GetHAEntityFloat(String entity, String * lastChanged)
 {
-    float rval = -99;
+    float rval = __FLT_MAX__;
+
     String last_changed;
-    String state_val = GetHaState("sensor.environment_sensor_0f95eb_temperature",&last_changed);
+    String state_val = GetHaState(entity,&last_changed);
 
     if (state_val.isEmpty() == false)
     {
@@ -100,4 +101,13 @@ float GetTemperature(String * lastChanged)
     }
 
     return rval;
+}
+
+String GetHATime()
+{
+    // light on the error checking since if this fails, then HA is probably toast.
+    String last_changed;
+    String state_val = GetHaState("sensor.time",&last_changed);
+
+    return state_val;
 }

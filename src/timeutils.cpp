@@ -116,3 +116,11 @@ bool getLocalTzTime(struct tm * time_info)
 
     return rval;
 }
+
+
+int GetTimeStampHour(const time_t timestamp)
+{
+    struct tm tm_temp;
+    gmtime_r(&timestamp, &tm_temp);
+    return tm_temp.tm_hour;
+}

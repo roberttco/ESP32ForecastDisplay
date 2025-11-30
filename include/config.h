@@ -19,5 +19,6 @@
 #define MY_LONGITUDE -105.0804652
 #define MY_TIMEZONE "America/Denver"    // seems like this could be derived form the lat/long
 
+#define TEMPERATURE_ENTITY "sensor.environment_sensor_0f95eb_temperature"
 #define TEMPERATURE_INTERVAL_MINUTES 5
 

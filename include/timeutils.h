@@ -12,3 +12,4 @@ void setTime(int yr, int month, int mday, int hr, int minute, int sec, int isDst
 bool TimestampToTzTimeInfo(time_t in_timestamp, struct tm *out_time);
 bool TimeInfoToTzTimeInfo(struct tm *in_time, struct tm *out_time);
 bool getLocalTzTime(struct tm * time_info);
+int GetTimeStampHour(const time_t timestamp);

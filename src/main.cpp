@@ -10,6 +10,7 @@
 OWMOneCall weather;
 
 RTC_DATA_ATTR time_t lastBootTime = 0;
+RTC_DATA_ATTR int lastForecastStartHour = 99;
 bool updateCurrentConditions = false;
 bool updateForecast = false;
 
@@ -98,10 +99,15 @@ void setup()
             updateCurrentConditions |= true;
         }
 
+        APPDEBUG_PRINT("lastForecastStartHour = ");
+        APPDEBUG_PRINTLN(lastForecastStartHour);
+        APPDEBUG_PRINT("current_time_tm.tm_hour = ");
+        APPDEBUG_PRINTLN(current_time_tm.tm_hour);
+
         // always do a 12-hour forecast update at the top of the hour
-        if (current_time_tm.tm_min == 0)
+        if ((current_time_tm.tm_min == 0) || (lastForecastStartHour != current_time_tm.tm_hour))
         {
-            updateForecast|= true;
+            updateForecast |= true;
         }
     }
     else 
@@ -156,9 +162,10 @@ void setup()
 
 #ifdef APPDEBUG
     verbose_print_reset_reason(reset_reason);
-    Serial.printf("Wake/boot status:\n     rtc time = %i:%02i:%02i\n     lastBootTime = %u\n     updateCurrentConditions = %s\n     updateforecast = %s\n",
+    Serial.printf("Wake/boot status:\n     rtc time = %i:%02i:%02i\n     lastBootTime = %u\n     lastForecastStartHour = %u\n     updateCurrentConditions = %s\n     updateforecast = %s\n",
                   current_time_tm.tm_hour, current_time_tm.tm_min, current_time_tm.tm_sec,
                   lastBootTime,
+                  lastForecastStartHour,
                   updateCurrentConditions ? "TRUE" : "FALSE",
                   updateForecast ? "TRUE" : "FALSE");
 #endif
@@ -176,11 +183,20 @@ void loop()
         currentWeather current_weather;
         //current_weather.ico = Icon::i01d;
         String lu;
-        current_weather.temp = GetTemperature(&lu);
+        current_weather.temp = GetHAEntityFloat(TEMPERATURE_ENTITY,&lu);
         //2025-10-11T23:16:41.808443+00:00
         current_weather.description = lu.substring(11,19);
 
         UpdateEntireDisplay(&current_weather, weather.hrWx);
+
+        // // prepare to verify that the forecast was indeed updated on the hour.  Sometimes it is not for whatever reason.
+        // struct tm tm_temp;
+        // if (TimestampToTzTimeInfo(weather.hrWx[0].time, &tm_temp))
+        // {
+        //     lastForecastStartHour = tm_temp.tm_hour;
+        // }
+
+        lastForecastStartHour = GetTimeStampHour(weather.hrWx[0].time);
     }
     else
     {
@@ -191,7 +207,7 @@ void loop()
         if (updateCurrentConditions)
         {
             String lu;
-            current_weather.temp = GetTemperature(&lu);
+            current_weather.temp = GetHAEntityFloat(TEMPERATURE_ENTITY,&lu);
             //2025-10-11T23:16:41.808443+00:00
             current_weather.description = lu.substring(11,19);
 
@@ -223,6 +239,14 @@ void loop()
     }
 
     lastBootTime = thisBootTime;
+
+#ifdef APPDEBUG
+    Serial.printf("Pre-sleep status:\n     lastBootTime = %u\n     lastForecastStartHour = %u\n     updateCurrentConditions = %s\n     updateforecast = %s\n",
+                  lastBootTime,
+                  lastForecastStartHour,
+                  updateCurrentConditions ? "TRUE" : "FALSE",
+                  updateForecast ? "TRUE" : "FALSE");
+#endif    
 
     if (d9_low_at_boot)
     {

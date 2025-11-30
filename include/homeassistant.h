@@ -1,7 +1,8 @@
 #ifndef __homeassistant_h
 #define __homeassistant_h
 
-float GetTemperature(String *lastChanged);
+float GetHAEntityFloat(String entity, String *lastChanged);
+String GetHATime();
 
 #endif
 
